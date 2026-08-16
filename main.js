@@ -140,7 +140,7 @@ function loop() {
 // ─────────────────────────────────────────────
 // 除錯層 + 即時滑桿
 // ─────────────────────────────────────────────
-const debug = { on: config.debugDefaultOn, el: null, readout: null };
+const debug = { on: config.debugDefaultOn, el: null, readout: null, toggleBtn: null };
 
 // 可即時調整的參數清單(min, max, step)
 const SLIDERS = [
@@ -158,13 +158,48 @@ const SLIDERS = [
   ['fileGainMax', 0, 2, 0.05],
 ];
 
+// 統一切換:浮動鈕、面板關閉鈕、D 鍵共用
+function toggleDebug(force) {
+  debug.on = (typeof force === 'boolean') ? force : !debug.on;
+  if (debug.el) debug.el.style.display = debug.on ? 'block' : 'none';
+  if (debug.toggleBtn) {
+    // 面板開啟時按鈕淡化,關閉時明顯,避免互相干擾
+    debug.toggleBtn.style.opacity = debug.on ? '0.35' : '0.85';
+  }
+}
+
 function buildDebug() {
+  // ── 常駐浮動切換鈕(右上角,手機可點)──
+  const btn = document.createElement('button');
+  btn.id = 'debugToggle';
+  btn.textContent = '⚙';
+  btn.style.cssText =
+    'position:fixed;top:10px;right:10px;z-index:10000;' +
+    'width:40px;height:40px;border-radius:50%;border:none;' +
+    'background:rgba(0,0,0,0.55);color:#0f0;font-size:20px;' +
+    'line-height:40px;text-align:center;cursor:pointer;' +
+    'padding:0;-webkit-tap-highlight-color:transparent;';
+  btn.addEventListener('click', () => toggleDebug());
+  document.body.appendChild(btn);
+  debug.toggleBtn = btn;
+
   const box = document.createElement('div');
   box.id = 'debug';
   box.style.cssText =
     'position:fixed;top:0;left:0;max-height:100vh;overflow:auto;' +
     'background:rgba(0,0,0,0.72);color:#0f0;font:11px/1.5 monospace;' +
-    'padding:8px 10px;z-index:9999;width:230px;';
+    'padding:8px 10px;z-index:9999;width:230px;' +
+    '-webkit-overflow-scrolling:touch;';
+
+  // 面板內關閉鈕
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕ 關閉面板';
+  closeBtn.style.cssText =
+    'width:100%;margin-bottom:8px;padding:6px;border:none;' +
+    'background:#222;color:#0f0;font:11px monospace;cursor:pointer;' +
+    'border-radius:2px;-webkit-tap-highlight-color:transparent;';
+  closeBtn.addEventListener('click', () => toggleDebug(false));
+  box.appendChild(closeBtn);
 
   const readout = document.createElement('div');
   readout.style.cssText = 'margin-bottom:8px;white-space:pre;color:#7fff7f;';
@@ -194,18 +229,17 @@ function buildDebug() {
 
   const hint = document.createElement('div');
   hint.style.cssText = 'margin-top:8px;color:#888;';
-  hint.textContent = '按 D 切換此面板 · 調好抄回 config.js';
+  hint.textContent = '右上 ⚙ 或按 D 切換 · 調好抄回 config.js';
   box.appendChild(hint);
 
   document.body.appendChild(box);
   debug.el = box;
-  box.style.display = debug.on ? 'block' : 'none';
+
+  // 初始狀態(含按鈕透明度)統一由 toggleDebug 設定
+  toggleDebug(debug.on);
 
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'd' || e.key === 'D') {
-      debug.on = !debug.on;
-      box.style.display = debug.on ? 'block' : 'none';
-    }
+    if (e.key === 'd' || e.key === 'D') toggleDebug();
   });
 }
 
